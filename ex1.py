@@ -114,7 +114,6 @@ def main():
         model.eval()
 
         predictions_output = trainer.predict(tokenized_dataset["test"])
-
         predictions = np.argmax(predictions_output.predictions, axis=-1)
 
         labels = tokenized_dataset["test"]["label"]
@@ -134,6 +133,29 @@ def main():
                 )
 
         print("Saved predictions to predictions.txt")
+
+        validation_output = trainer.predict(tokenized_dataset["validation"])
+        validation_predictions = np.argmax(validation_output.predictions, axis=-1)
+        validation_labels = tokenized_dataset["validation"]["label"]
+
+        with open("validation_predictions.txt", "w", encoding="utf-8") as f:
+            for example, pred, label in zip(
+                dataset["validation"],
+                validation_predictions,
+                validation_labels
+            ):
+                f.write(
+                    example["sentence1"]
+                    + "###"
+                    + example["sentence2"]
+                    + "###"
+                    + str(pred)
+                    + "###"
+                    + str(label)
+                    + "\n"
+                )
+
+        print("Saved validation predictions to validation_predictions.txt")
 
 if __name__ == "__main__":
     main()
