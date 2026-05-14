@@ -35,7 +35,9 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
 
     dataset = load_dataset("glue", "mrpc")
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+    model_path = args.model_path if args.model_path is not None else model_name
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
 
     if args.max_train_samples != -1:
         dataset["train"] = dataset["train"].select(range(args.max_train_samples))
@@ -54,21 +56,9 @@ def main():
     tokenized_dataset = dataset.map(tokenize_function, batched=True)
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
-    model_path = args.model_path if args.model_path is not None else model_name
     model = AutoModelForSequenceClassification.from_pretrained(model_path, num_labels=2)
 
     run_name = f"bert_mrpc_epochs_{args.num_train_epochs}_lr_{args.lr}_bs_{args.batch_size}"
-
-    wandb.init(
-        project="anlp_ex1",
-        name=run_name,
-        config={
-            "model": model_name,
-            "epochs": args.num_train_epochs,
-            "learning_rate": args.lr,
-            "batch_size": args.batch_size,
-        }
-    )
 
     def compute_metrics(eval_pred):
         logits, labels = eval_pred
@@ -85,7 +75,7 @@ def main():
         num_train_epochs=args.num_train_epochs,
         weight_decay=0.01,
         logging_steps=1,
-        report_to="wandb",
+        report_to="wandb" if args.do_train else "none",
         run_name=run_name,
     )
 
@@ -99,6 +89,17 @@ def main():
     )
 
     if args.do_train:
+        wandb.init(
+            project="anlp_ex1",
+            name=run_name,
+            config={
+                "model": model_name,
+                "epochs": args.num_train_epochs,
+                "learning_rate": args.lr,
+                "batch_size": args.batch_size,
+            }
+        )
+
         trainer.train()
         eval_results = trainer.evaluate()
         print(eval_results)
@@ -107,7 +108,17 @@ def main():
         trainer.save_model(final_model_path)
         tokenizer.save_pretrained(final_model_path)
 
-    wandb.finish()
+        wandb.finish()
+
+    if args.do_predict:
+        predictions_output = trainer.predict(tokenized_dataset["test"])
+        predictions = np.argmax(predictions_output.predictions, axis=-1)
+
+        with open("predictions.txt", "w", encoding="utf-8") as f:
+            for pred in predictions:
+                f.write(str(pred) + "\n")
+
+        print("Saved predictions to predictions.txt")
 
 if __name__ == "__main__":
     main()
