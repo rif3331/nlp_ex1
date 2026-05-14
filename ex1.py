@@ -111,12 +111,27 @@ def main():
         wandb.finish()
 
     if args.do_predict:
+        model.eval()
+
         predictions_output = trainer.predict(tokenized_dataset["test"])
+
         predictions = np.argmax(predictions_output.predictions, axis=-1)
+
+        labels = tokenized_dataset["test"]["label"]
+        test_accuracy = accuracy_score(labels, predictions)
+
+        print(f"Test accuracy: {test_accuracy}")
 
         with open("predictions.txt", "w", encoding="utf-8") as f:
             for example, pred in zip(dataset["test"], predictions):
-                f.write(example["sentence1"] + "###" + example["sentence2"] + "###" + str(pred) + "\n")
+                f.write(
+                    example["sentence1"]
+                    + "###"
+                    + example["sentence2"]
+                    + "###"
+                    + str(pred)
+                    + "\n"
+                )
 
         print("Saved predictions to predictions.txt")
 
