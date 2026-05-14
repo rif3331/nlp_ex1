@@ -115,8 +115,8 @@ def main():
         predictions = np.argmax(predictions_output.predictions, axis=-1)
 
         with open("predictions.txt", "w", encoding="utf-8") as f:
-            for pred in predictions:
-                f.write(str(pred) + "\n")
+            for example, pred in zip(dataset["test"], predictions):
+                f.write(example["sentence1"] + "###" + example["sentence2"] + "###" + str(pred) + "\n")
 
         print("Saved predictions to predictions.txt")
 
